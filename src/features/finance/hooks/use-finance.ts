@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/shared/lib/supabase/client";
+import { getMyUserId } from "@/shared/lib/supabase/get-user-profile";
 import { QUERY_KEYS } from "@/shared/constants";
 import type { Transaction, UserGoal, CreateTransactionPayload, CreateGoalPayload, MonthlyTotals, DonutSlice } from "@/shared/types";
 
@@ -60,11 +61,10 @@ export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateTransactionPayload) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
+      const userId = await getMyUserId(supabase);
       const { data, error } = await supabase
         .from("transactions")
-        .insert({ ...payload, user_id: user.id, occurred_at: payload.occurred_at ?? new Date().toISOString() })
+        .insert({ ...payload, user_id: userId, occurred_at: payload.occurred_at ?? new Date().toISOString() })
         .select()
         .single();
       if (error) throw error;
@@ -95,11 +95,10 @@ export function useCreateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateGoalPayload) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
+      const userId = await getMyUserId(supabase);
       const { data, error } = await supabase
         .from("user_goals")
-        .insert({ ...payload, user_id: user.id })
+        .insert({ ...payload, user_id: userId })
         .select()
         .single();
       if (error) throw error;

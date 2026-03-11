@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/shared/lib/supabase/client";
+import { getMyUserId } from "@/shared/lib/supabase/get-user-profile";
 import { QUERY_KEYS } from "@/shared/constants";
 import type { Task, CreateTaskPayload, TaskStatus, DonutSlice } from "@/shared/types";
 
@@ -67,9 +68,12 @@ export function useCreateTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateTaskPayload) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
-      const { data, error } = await supabase.from("tasks").insert({ ...payload, user_id: user.id }).select().single();
+      const userId = await getMyUserId(supabase);
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert({ ...payload, user_id: userId })
+        .select()
+        .single();
       if (error) throw error;
       return data as Task;
     },

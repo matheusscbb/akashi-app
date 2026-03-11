@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { createClient } from "@/shared/lib/supabase/client";
 import { ASSISTANT_SESSION_KEY } from "@/shared/constants";
 import type { ChatMessage } from "@/shared/types";
 
@@ -25,25 +24,21 @@ export function useAssistant() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Não autenticado");
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/assistant`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ message: content, session_id: getOrCreateSessionId() }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Falha ao obter resposta do assistente");
+      const response = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          session_id: getOrCreateSessionId(),
+        }),
+      });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Falha ao obter resposta do assistente");
+      }
+
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: data.content,
@@ -51,9 +46,10 @@ export function useAssistant() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
+      const errorText = err instanceof Error ? err.message : "Erro desconhecido";
       const errorMsg: ChatMessage = {
         role: "assistant",
-        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.",
+        content: `Desculpe, ocorreu um erro: ${errorText}`,
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
